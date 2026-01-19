@@ -299,95 +299,91 @@ function Recommendations() {
      ✅ If ALL answers are MAYBE => return ALL recommendations as LOW
   =============================== */
   const classifyForPA = useCallback(
-    (answersByKrId) => {
-      let high = [];
-      let medium = [];
-      let low = [];
+      (answersByKrId) => {
+        let high = [];
+        let medium = [];
+        let low = [];
 
-      // ✅ Detect "everything is MAYBE"
-      const ansValues = Object.values(answersByKrId || {}).filter(Boolean);
-      const hasAnyAnswers = ansValues.length > 0;
-      const allMaybe = hasAnyAnswers && ansValues.every((v) => v === "MAYBE");
+        // ✅ Detect "everything is MAYBE"
+        const ansValues = Object.values(answersByKrId || {}).filter(Boolean);
+        const hasAnyAnswers = ansValues.length > 0;
+        const allMaybe = hasAnyAnswers && ansValues.every((v) => v === "MAYBE");
 
-      // ✅ If ALL MAYBE => show ALL allowed recommendations as LOW (per your requirement)
-      if (allMaybe) {
+        // ✅ If ALL MAYBE => show ALL allowed recommendations as LOW
+        if (allMaybe) {
+          for (const rec of recMap.values()) {
+            if (isUniversalValue(rec.Ar_universali)) continue;
+
+            const recLevel = String(rec.Atitikties_lygis || "").trim().toUpperCase();
+            if (!allowedLevels.includes(recLevel)) continue;
+
+            low.push({
+              ...rec,
+              probability: 0.29,
+              probabilityLevel: "L",
+            });
+          }
+
+          const deduped = dedupeByWcagFamilies(low);
+          return { high: [], medium: [], low: deduped };
+        }
+
+        // Normal logic when not "all MAYBE"
         for (const rec of recMap.values()) {
           if (isUniversalValue(rec.Ar_universali)) continue;
 
           const recLevel = String(rec.Atitikties_lygis || "").trim().toUpperCase();
           if (!allowedLevels.includes(recLevel)) continue;
 
-          // even if rules missing, you asked to assign all recs as low
-          low.push({
-            ...rec,
-            probability: 0.29, // boundary of Low
-            probabilityLevel: "L",
-          });
-        }
+          if (!Array.isArray(rec.rules) || rec.rules.length === 0) continue;
 
-        const deduped = dedupeByWcagFamilies(low);
-        return {
-          high: [],
-          medium: [],
-          low: deduped,
-        };
-      }
+          // special handling for 4.1.2
+          if (isRec412(rec)) {
+            const matched = rec.rules.some((ru) => {
+              const ans = answersByKrId[ru.KR_id];
+              if (!ans) return false;
+              return ru.expected ? ans === ru.expected : ans === "YES";
+            });
+            if (matched) high.push({ ...rec, probability: 1.0, probabilityLevel: "H" });
+            continue;
+          }
 
-      // Normal logic when not "all MAYBE"
-      for (const rec of recMap.values()) {
-        if (isUniversalValue(rec.Ar_universali)) continue;
-
-        const recLevel = String(rec.Atitikties_lygis || "").trim().toUpperCase();
-        if (!allowedLevels.includes(recLevel)) continue;
-
-        if (!Array.isArray(rec.rules) || rec.rules.length === 0) continue;
-
-        if (isRec412(rec)) {
-          const matched = rec.rules.some((ru) => {
+          const matchedPs = [];
+          for (const ru of rec.rules) {
             const ans = answersByKrId[ru.KR_id];
-            if (!ans) return false;
-            return ru.expected ? ans === ru.expected : ans === "YES";
-          });
-          if (matched) high.push({ ...rec, probability: 1.0, probabilityLevel: "H" });
-          continue;
+            if (!ans) continue;
+            if (!ru.expected) continue;
+
+            if (ans !== ru.expected) continue;
+
+            const p = computeProbability(ru);
+            if (typeof p === "number" && !Number.isNaN(p)) matchedPs.push(p);
+          }
+
+          if (matchedPs.length === 0) continue;
+
+          const finalP = matchedPs.length === 1 ? matchedPs[0] : Math.max(...matchedPs);
+          const lvl = probToLevel(finalP);
+          if (!lvl) continue;
+
+          const recWithP = { ...rec, probability: finalP, probabilityLevel: lvl };
+
+          if (lvl === "H") high.push(recWithP);
+          else if (lvl === "M") medium.push(recWithP);
+          else if (lvl === "L") low.push(recWithP);
         }
 
-        const matchedPs = [];
-        for (const ru of rec.rules) {
-          const ans = answersByKrId[ru.KR_id];
-          if (!ans) continue;
-          if (!ru.expected) continue;
+        const all = [...high, ...medium, ...low];
+        const dedupedAll = dedupeByWcagFamilies(all);
 
-          if (ans !== ru.expected) continue;
+        high = dedupedAll.filter((r) => r.probabilityLevel === "H");
+        medium = dedupedAll.filter((r) => r.probabilityLevel === "M");
+        low = dedupedAll.filter((r) => r.probabilityLevel === "L");
 
-          const p = computeProbability(ru);
-          if (typeof p === "number" && !Number.isNaN(p)) matchedPs.push(p);
-        }
-
-        if (matchedPs.length === 0) continue;
-
-        const finalP = matchedPs.length === 1 ? matchedPs[0] : Math.max(...matchedPs);
-        const lvl = probToLevel(finalP);
-        if (!lvl) continue;
-
-        const recWithP = { ...rec, probability: finalP, probabilityLevel: lvl };
-
-        if (lvl === "H") high.push(recWithP);
-        else if (lvl === "M") medium.push(recWithP);
-        else if (lvl === "L") low.push(recWithP);
-      }
-
-      const all = [...high, ...medium, ...low];
-      const dedupedAll = dedupeByWcagFamilies(all);
-
-      high = dedupedAll.filter((r) => r.probabilityLevel === "H");
-      medium = dedupedAll.filter((r) => r.probabilityLevel === "M");
-      low = dedupedAll.filter((r) => r.probabilityLevel === "L");
-
-      return { high, medium, low };
-    },
-    [recMap, allowedLevels, dedupeByWcagFamilies]
-  );
+        return { high, medium, low };
+      },
+      [recMap, allowedLevels, dedupeByWcagFamilies, isUniversalValue, isRec412, computeProbability, probToLevel]
+    );
 
   /* ===============================
      BUILD RESULTS
