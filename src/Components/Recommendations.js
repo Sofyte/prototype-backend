@@ -43,10 +43,10 @@ function Recommendations() {
     setLoading(true);
 
     Promise.all([
-      fetch(`http://localhost:5000/api/project/${projectId}`).then((r) => r.json()),
-      fetch(`http://localhost:5000/api/specifications/${projectId}`).then((r) => r.json()),
-      fetch(`http://localhost:5000/api/rekomendacijos`).then((r) => r.json()),
-      fetch(`http://localhost:5000/api/requirements/${projectId}`).then((r) => r.json()),
+      fetch(`/api/project/${projectId}`).then((r) => r.json()),
+      fetch(`/api/specifications/${projectId}`).then((r) => r.json()),
+      fetch(`/api/rekomendacijos`).then((r) => r.json()),
+      fetch(`/api/requirements/${projectId}`).then((r) => r.json()),
     ])
       .then(([project, specifications, recommendations, requirements]) => {
         const lvl = project?.Atitikties_lygis
@@ -82,6 +82,7 @@ function Recommendations() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
+
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
@@ -90,7 +91,7 @@ function Recommendations() {
      HELPERS
   =============================== */
 
-  const isUniversalValue = (v) => {
+  const isUniversalValue = useCallback((v) => {
     if (v == null) return false;
 
     if (typeof v === "object" && v.type === "Buffer" && Array.isArray(v.data)) {
@@ -106,13 +107,12 @@ function Recommendations() {
       const s = v.trim().toUpperCase();
       if (["1", "TRUE", "YES", "TAIP", "T"].includes(s)) return true;
       if (["0", "FALSE", "NO", "NE", "N"].includes(s)) return false;
-      return false;
     }
 
     return false;
-  };
+  }, []);
 
-  const normalizeAnswer = (v) => {
+  const normalizeAnswer = useCallback((v) => {
     if (typeof v !== "string") return undefined;
     const s = v.trim().toUpperCase();
 
@@ -121,31 +121,34 @@ function Recommendations() {
     if (s === "GAL" || s === "GALBŪT" || s === "GALBUT") return "MAYBE";
 
     return s; // YES/NO/MAYBE
-  };
+  }, []);
 
-  const getWcagCode = (rec) => {
+  const getWcagCode = useCallback((rec) => {
     const first = String(rec?.Formuluote || "").trim().split(/\s+/)[0] || "";
     const m = first.match(/^(\d+\.\d+\.\d+)(?:\.)?$/);
     return m ? m[1] : "";
-  };
+  }, []);
 
-  const isRec412 = (rec) => getWcagCode(rec) === "4.1.2";
+  const isRec412 = useCallback((rec) => getWcagCode(rec) === "4.1.2", [getWcagCode]);
 
-  const computeProbability = (ru) => ru.v1 * 0.5 + ru.v2 * 0.3 + ru.v3 * 0.2;
+  const computeProbability = useCallback(
+    (ru) => ru.v1 * 0.5 + ru.v2 * 0.3 + ru.v3 * 0.2,
+    []
+  );
 
-  const probToLevel = (p) => {
+  const probToLevel = useCallback((p) => {
     if (p >= 0.7 && p <= 1.0) return "H";
     if (p >= 0.3 && p <= 0.69) return "M";
     if (p >= 0.0 && p <= 0.29) return "L";
     return null;
-  };
+  }, []);
 
-  const probToDb = (lvl) => {
+  const probToDb = useCallback((lvl) => {
     if (lvl === "H") return "A";
     if (lvl === "M") return "V";
     if (lvl === "L") return "Ž";
     return null;
-  };
+  }, []);
 
   /* ===============================
      allowed WCAG levels (kaupiantis)
@@ -258,7 +261,7 @@ function Recommendations() {
     });
 
     return map;
-  }, [recs]);
+  }, [recs, normalizeAnswer]);
 
   const getWcagCodeFromText = (text) => {
     const first = String(text || "").trim().split(/\s+/)[0] || "";
@@ -421,7 +424,15 @@ function Recommendations() {
     });
 
     return { general: generalList, perPA: perPAList };
-  }, [recMap, specs, classifyForPA, allowedLevels, dedupeByWcagFamilies]);
+  }, [
+      recMap,
+      specs,
+      allowedLevels,
+      dedupeByWcagFamilies,
+      isUniversalValue,
+      normalizeAnswer,
+      classifyForPA,
+  ]);
 
   /* ===============================
      CONFIRM
@@ -431,7 +442,7 @@ function Recommendations() {
     setConfirmingKey(key);
 
     try {
-      const res = await fetch("http://localhost:5000/api/requirements/create", {
+      const res = await fetch(`/api/requirements/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -479,7 +490,7 @@ function Recommendations() {
     try {
       await Promise.all(
         toConfirm.map((r) =>
-          fetch("http://localhost:5000/api/requirements/create", {
+          fetch(`/api/requirements/create`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -526,10 +537,11 @@ function Recommendations() {
   try {
     await Promise.all(
       combined.map((r) =>
-        fetch("http://localhost:5000/api/requirements/create", {
+        fetch(`/api/requirements/create`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            
             projectId: Number(projectId),
             paId: Number(paId),
             recommendationId: Number(r.id_Rekomendacija),
@@ -606,7 +618,7 @@ function Recommendations() {
     };
 
     try {
-      const res = await fetch("http://localhost:5000/api/pa-reikalavimai/update", {
+      const res = await fetch(`/api/pa-reikalavimai/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -636,7 +648,7 @@ function Recommendations() {
   =============================== */
   const saveProject = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/projects/save", {
+      const res = await fetch(`/api/project/${projectId}/api/projects/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: Number(projectId) }),
