@@ -87,7 +87,22 @@ app.post("/projektai", (req, res) => {
     query,
     [pavadinimas, aprasymas || null, sukurimo_data, atitikties_lygis],
     (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
       res.json({ success: true, projectId: result.insertId });
     }
   );
@@ -99,7 +114,22 @@ app.get("/api/project/:id", (req, res) => {
     "SELECT * FROM Projektas WHERE id_Projektas = ?",
     [req.params.id],
     (err, rows) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
       if (!rows.length) return res.status(404).json({ error: "Not found" });
       res.json(rows[0]);
     }
@@ -117,7 +147,22 @@ app.get("/api/kr", (req, res) => {
   `;
 
   db.query(query, (err, rows) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
 
     const grouped = {};
     rows.forEach((r) => {
@@ -153,7 +198,22 @@ app.post("/api/pa/create", (req, res) => {
     "INSERT INTO PA (PA_kodas, Pavadinimas, Charakteristika, fk_id_Projektas) VALUES (?, ?, ?, ?)",
     [PA_kodas, pavadinimas, charakteristika || null, projektas_id],
     (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
       res.json({ success: true, id_PA: result.insertId });
     }
   );
@@ -170,7 +230,22 @@ app.post("/api/pa/kr/save", (req, res) => {
       "DELETE FROM kr_reiksme WHERE fk_id_PA = ?",
       [paId],
       (err) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
         res.json({ success: true });
       }
     );
@@ -184,7 +259,22 @@ app.post("/api/pa/kr/save", (req, res) => {
   `;
 
   db.query(query, [paId, values], (err) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
     res.json({ success: true });
   });
 });
@@ -209,7 +299,22 @@ app.get("/api/specifications/:projectId", (req, res) => {
   `;
 
   db.query(query, [req.params.projectId], (err, rows) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
 
     const grouped = {};
     rows.forEach((r) => {
@@ -254,7 +359,22 @@ app.get("/api/rekomendacijos", (req, res) => {
   `;
 
   db.query(query, (err, rows) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
     res.json(rows);
   });
 });
@@ -299,7 +419,22 @@ app.get("/api/requirements/:projectId", (req, res) => {
   `;
 
   db.query(query, [req.params.projectId], (err, rows) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
     res.json(rows);
   });
 });
@@ -324,7 +459,22 @@ app.post("/api/requirements/create", (req, res) => {
   `;
 
   db.query(checkQuery, [projectId, paId, recommendationId], (err, exists) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
 
     if (Array.isArray(exists) && exists.length > 0) {
       const existingId = exists[0].id_Reikalavimas;
@@ -483,7 +633,22 @@ const updatePaReikalavimasHandler = (req, res) => {
       paId,
     ],
     (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
 
       if (result.affectedRows === 0) {
         const insertQuery = `
@@ -542,7 +707,22 @@ app.post("/api/projects/save", (req, res) => {
     "UPDATE Projektas SET IsSaved = 1 WHERE id_Projektas = ?",
     [projectId],
     (err) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
       res.json({ success: true, message: "Project saved successfully." });
     }
   );
@@ -564,7 +744,22 @@ app.get("/api/myprojects", (req, res) => {
   `;
 
   db.query(query, (err, rows) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
     res.json(rows);
   });
 });
@@ -575,7 +770,22 @@ app.delete("/api/requirements/:id", (req, res) => {
     "DELETE FROM reikalavimas WHERE id_Reikalavimas = ?",
     [req.params.id],
     (err) => {
-      if (err) return res.status(500).json({ error: err });
+      if (err) {
+  console.error("DB QUERY ERROR:", {
+    code: err.code,
+    errno: err.errno,
+    sqlState: err.sqlState,
+    message: err.message,
+    sql: err.sql,
+  });
+
+  return res.status(500).json({
+    error: {
+      code: err.code,
+      message: err.message,
+    },
+  });
+}
       res.json({ success: true });
     }
   );
