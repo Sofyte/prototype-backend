@@ -223,7 +223,7 @@ function Recommendations() {
         return true;
       });
     },
-    [DUP_GROUPS, levelPriority]
+    [DUP_GROUPS, levelPriority, getWcagCode]
   );
 
   /* ===============================
