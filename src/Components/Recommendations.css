@@ -1,0 +1,449 @@
+/* ================================
+   GLOBAL WRAPPER (CENTERED CONTENT)
+================================ */
+
+.recommendations-wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 10px;
+
+  /* REMOVE secondary-card appearance */
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+
+/* ================================
+   HEADINGS
+================================ */
+
+.recommendations-wrapper h1 {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.recommendations-wrapper h3 {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.recommendations-wrapper h4 {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+.recommendations-wrapper h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 30px 0 12px 0;
+  color: #005fa3;
+}
+.recommendations-wrapper h1 {
+  margin-top: -10px;   /* pakelia antraštę aukštyn */
+  margin-bottom: 18px;
+}
+
+/* ================================
+   PARAGRAPHS
+================================ */
+
+.recommendations-wrapper p {
+  font-size: 13px;
+  color: #333;
+}
+
+
+/* ================================
+   TABLE STYLING
+================================ */
+
+.rec-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+
+  /* soft shadow for floating table look */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* header row */
+.rec-table th {
+  background: #e6f0ff;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #003e72;
+  border-bottom: 1px solid #d5e5f7;
+  text-align: left;
+}
+
+/* cells */
+.rec-table td {
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #ececec;
+  vertical-align: top;
+  line-height: 1.35;
+}
+
+/* remove bottom border from last row */
+.rec-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* hover effect */
+.rec-table tr:hover td {
+  background: #f7fbff;
+}
+
+
+/* ================================
+   COLUMN SIZING & ALIGNMENT
+================================ */
+
+.rec-table--general th:nth-child(1),
+.rec-table--general td:nth-child(1) {
+  width: 30%;
+}
+
+.rec-table--general th:nth-child(2),
+.rec-table--general td:nth-child(2) {
+  width: 70%;
+}
+
+
+/* Level column */
+.rec-table th:last-child,
+.rec-table td:last-child {
+  width: 140px;
+  text-align: left;
+}
+
+.rec-table--equal {
+  table-layout: fixed;
+}
+
+.rec-table--equal th,
+.rec-table--equal td {
+  width: auto;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Goal column (biggest text) */
+.rec-table td:nth-child(3) {
+  width: 50%;
+  line-height: 1.35;
+}
+.recommendations-wrapper > h1 {
+  margin-top: -35px !important;
+}
+
+.save-actions {
+  margin-top: 40px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  padding: 12px 28px;
+  background: #111;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.save-btn:hover {
+  background: #333;
+}
+
+.project-title {
+  text-align: center;
+  color: #222;
+  font-weight: bold;
+}
+
+.recommendations-wrapper h2 {
+  margin: 0;
+  color: #222;
+  margin-bottom: 25px;
+  margin-top: 25px;
+}
+
+/* ================================
+   PA COLLAPSIBLE HEADER
+================================ */
+
+.pa-collapse-header {
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: #f3f7ff;
+  border: 1px solid #d5e5f7;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pa-collapse-header:hover {
+  background: #eaf2ff;
+}
+
+.pa-collapse-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+}
+
+.pa-collapse-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pa-counts {
+  font-size: 12px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.pa-collapse-icon {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: #003e72;
+}
+
+.pa-probability-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.pa-probability-header h3 {
+  margin: 0;
+}
+
+.confirm-btn {
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  border: solid 1px rgb(97, 96, 96);
+}
+
+.confirm-btn:hover {
+  background-color: #666;
+  color: white;
+}
+
+.pa-actions-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 10px;
+}
+
+.pa-actions-row .pa-desc {
+  margin: 0;
+  flex: 1;
+}
+
+.accept-all-pa-btn {
+  padding: 8px 12px;
+  border: 1px solid #003e72;
+  background: #fff;
+  color: #003e72;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.accept-all-pa-btn:hover {
+  background: #eaf2ff;
+}
+
+.accept-all-pa-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-all-pa-btn {
+  padding: 8px 12px;
+  background: rgb(252, 0, 0);
+  border: 1px solid #003e72;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cancel-all-pa-btn:hover {
+  background: hsl(0, 90%, 64%);
+}
+
+/* ================================
+   EDIT MODAL
+================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-card {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  overflow: hidden;
+
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #111;
+}
+
+.modal-x {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.modal-x:hover {
+  background: #f2f2f2;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 12px;
+}
+
+.req {
+  color: #d00;
+  font-weight: 900;
+}
+
+.modal-textarea,
+.modal-select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+
+  border: 2px solid #d00;
+  border-radius: 10px;
+  padding: 10px 12px;
+
+  font-size: 14px;
+  color: #111;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.modal-textarea {
+  resize: none;
+  caret-color: black;
+}
+
+.modal-select {
+  height: 44px;
+}
+
+.modal-textarea:focus,
+.modal-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 95, 163, 0.18);
+  border-color: #005fa3;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid #eee;
+}
+
+.modal-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.modal-btn--ghost {
+  background: #fff;
+  border: 1px solid #bbb;
+}
+
+.modal-btn--ghost:hover {
+  background: #f5f5f5;
+}
+
+.modal-btn--primary {
+  background: #111;
+  border: 1px solid #111;
+  color: #fff;
+}
+
+.modal-btn--primary:hover {
+  background: #333;
+}
+
+.modal-btn:disabled,
+.modal-x:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
