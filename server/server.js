@@ -69,11 +69,6 @@ const db = mysql.createPool({
   connectTimeout: 15000,
 });
 
-db.connect((err) => {
-  if (err) console.error("❌ DB ERROR:", err);
-  else console.log("✅ DB connected");
-});
-
 /* -----------------------------
    YOUR ROUTES (unchanged)
 ------------------------------ */
