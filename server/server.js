@@ -590,8 +590,8 @@ const __dirname = path.dirname(__filename);
 // CRA build output is at project_root/build
 app.use(express.static(path.join(__dirname, "..", "build")));
 
-// send React for any non-API routes
-app.get("/*", (req, res, next) => {
+// send React for any non-API routes (Express 5 safe)
+app.get(/.*/, (req, res, next) => {
   if (req.originalUrl.startsWith("/api") || req.originalUrl.startsWith("/projektai")) return next();
   res.sendFile(path.join(__dirname, "..", "build", "index.html"));
 });
