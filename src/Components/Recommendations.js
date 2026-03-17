@@ -157,9 +157,9 @@ function Recommendations() {
   }, []);
 
   const probToDb = useCallback((lvl) => {
-    if (lvl === "H") return "A";
-    if (lvl === "M") return "V";
-    if (lvl === "L") return "Ž";
+    if (lvl === "H") return "H";
+    if (lvl === "M") return "M";
+    if (lvl === "L") return "L";
     return null;
   }, []);
 
