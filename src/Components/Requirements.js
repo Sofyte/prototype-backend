@@ -25,7 +25,6 @@ function Requirements() {
   };
 
   const isPACollapsed = (paId) => !!collapsedPA[paId];
-
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -37,7 +36,6 @@ function Requirements() {
   });
   const [editErrors, setEditErrors] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
-
   const fetchAll = useCallback(() => {
     setLoading(true);
 
@@ -57,7 +55,6 @@ function Requirements() {
         setRows(Array.isArray(requirements) ? requirements : []);
       })
       .catch((e) => {
-        console.error("Requirements fetch error:", e);
         setProjectLevel("-");
         setProjectName("");
         setRows([]);
