@@ -52,16 +52,18 @@ app.get("/api/health", (req, res) => {
 /* -----------------------------
    DB CONNECTION (from .env)
 ------------------------------ */
-const db = mysql.createPool({
-  host: process.env.MYSQLHOST || process.env.DB_HOST,
-  port: Number(process.env.MYSQLPORT || process.env.DB_PORT || 3306),
-  user: process.env.MYSQLUSER || process.env.DB_USER,
-  password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD,
-  database: process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE || process.env.DB_NAME || "railway",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  connectTimeout: 15000,
+const db = mysql.createConnection({
+  host: "127.0.0.1",
+  port: 3306,
+  user: "root",
+  password: "Sofija333",
+  database: "magistrinis",
+  multipleStatements: true,
+});
+
+db.connect((err) => {
+  if (err) console.error("❌ DB ERROR:", err);
+  else console.log("✅ DB connected");
 });
 
 
@@ -413,7 +415,10 @@ app.get("/api/requirements/:projectId", (req, res) => {
       AND req.fk_id_PA = par.fk_id_PA
     LEFT JOIN pa ON pa.id_PA = req.fk_id_PA
     LEFT JOIN rekomendacija r ON r.id_Rekomendacija = req.fk_id_Rekomendacija
+
     WHERE req.fk_id_Projektas = ?
+      AND (par.Busena IS NULL OR par.Busena != 'Cancelled')
+
     ORDER BY req.fk_id_PA, req.id_Reikalavimas DESC
   `;
 
@@ -707,21 +712,11 @@ app.post("/api/projects/save", (req, res) => {
     [projectId],
     (err) => {
       if (err) {
-  console.error("DB QUERY ERROR:", {
-    code: err.code,
-    errno: err.errno,
-    sqlState: err.sqlState,
-    message: err.message,
-    sql: err.sql,
-  });
-
-  return res.status(500).json({
-    error: {
-      code: err.code,
-      message: err.message,
-    },
-  });
-}
+        console.error("DB QUERY ERROR:", err);
+        return res.status(500).json({
+          error: { code: err.code, message: err.message },
+        });
+      }
       res.json({ success: true, message: "Project saved successfully." });
     }
   );

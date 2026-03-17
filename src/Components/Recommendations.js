@@ -1,52 +1,73 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate  } from "react-router-dom";
 import "./Recommendations.css";
 
 function Recommendations() {
   const { projectId } = useParams();
+
+  const API_BASE = "http://localhost:5000";
+
+  const navigate = useNavigate();
+
   const [projectName, setProjectName] = useState("");
   const [projectLevel, setProjectLevel] = useState("-");
-  const [specs, setSpecs] = useState([]); // PA list
+  const [specs, setSpecs] = useState([]);
   const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // confirmed state: key = `${paId}:${recId}`
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    message: "",
+    onConfirm: null,
+  });
+
   const [confirmed, setConfirmed] = useState({});
   const [confirmingKey, setConfirmingKey] = useState(null);
 
-  // requirements map (status + ids)
   const [reqMap, setReqMap] = useState(new Map());
 
-  // edit modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [editForm, setEditForm] = useState({
     tenkinimo_kriterijus: "",
-    prioritetas: "3",
+    prioritetas: "1",
     patikslinta_formuluote: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
-  // collapse per PA: key = paId => true/false
+  const [editErrors, setEditErrors] = useState({});
+
   const [collapsedPA, setCollapsedPA] = useState({});
 
   const togglePA = (paId) => {
     setCollapsedPA((prev) => ({ ...prev, [paId]: !prev[paId] }));
   };
 
+  const openConfirmModal = (message, onConfirm) => {
+    setConfirmModal({
+      open: true,
+      message,
+      onConfirm,
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      message: "",
+      onConfirm: null,
+    });
+  };
+
   const isPACollapsed = (paId) => !!collapsedPA[paId];
 
-
-  /* ===============================
-     FETCH
-  =============================== */
   const fetchAll = useCallback(() => {
     setLoading(true);
 
     Promise.all([
-      fetch(`/api/project/${projectId}`).then((r) => r.json()),
-      fetch(`/api/specifications/${projectId}`).then((r) => r.json()),
-      fetch(`/api/rekomendacijos`).then((r) => r.json()),
-      fetch(`/api/requirements/${projectId}`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/project/${projectId}`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/specifications/${projectId}`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/rekomendacijos`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/requirements/${projectId}`).then((r) => r.json()),
     ])
       .then(([project, specifications, recommendations, requirements]) => {
         const lvl = project?.Atitikties_lygis
@@ -80,16 +101,11 @@ function Recommendations() {
         setConfirmed({});
       })
       .finally(() => setLoading(false));
-  }, [projectId]);
-
+  }, [API_BASE, projectId]);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
-
-  /* ===============================
-     HELPERS
-  =============================== */
 
   const isUniversalValue = useCallback((v) => {
     if (v == null) return false;
@@ -120,7 +136,7 @@ function Recommendations() {
     if (s === "NE") return "NO";
     if (s === "GAL" || s === "GALBŪT" || s === "GALBUT") return "MAYBE";
 
-    return s; // YES/NO/MAYBE
+    return s;
   }, []);
 
   const getWcagCode = useCallback((rec) => {
@@ -131,10 +147,7 @@ function Recommendations() {
 
   const isRec412 = useCallback((rec) => getWcagCode(rec) === "4.1.2", [getWcagCode]);
 
-  const computeProbability = useCallback(
-    (ru) => ru.v1 * 0.5 + ru.v2 * 0.3 + ru.v3 * 0.2,
-    []
-  );
+  const computeProbability = useCallback((ru) => ru.v1 * 0.5 + ru.v2 * 0.3 + ru.v3 * 0.2, []);
 
   const probToLevel = useCallback((p) => {
     if (p >= 0.7 && p <= 1.0) return "H";
@@ -150,9 +163,6 @@ function Recommendations() {
     return null;
   }, []);
 
-  /* ===============================
-     allowed WCAG levels (kaupiantis)
-  =============================== */
   const allowedLevels = useMemo(() => {
     return (
       {
@@ -163,9 +173,6 @@ function Recommendations() {
     );
   }, [projectLevel]);
 
-  /* ===============================
-     Dedupe families
-  =============================== */
   const DUP_GROUPS = useMemo(
     () => [
       { key: "contrast_text", A: null, AA: "1.4.3", AAA: "1.4.6" },
@@ -226,9 +233,6 @@ function Recommendations() {
     [DUP_GROUPS, levelPriority, getWcagCode]
   );
 
-  /* ===============================
-     recMap (group rules per rec)
-  =============================== */
   const recMap = useMemo(() => {
     const map = new Map();
 
@@ -297,100 +301,135 @@ function Recommendations() {
       .map((x) => x.item);
   };
 
-  /* ===============================
-     classifyForPA  (UPDATED)
-     ✅ If ALL answers are MAYBE => return ALL recommendations as LOW
-  =============================== */
-  const classifyForPA = useCallback(
-      (answersByKrId) => {
-        let high = [];
-        let medium = [];
-        let low = [];
+  const removeRequirement = (paId, recId) => {
+    openConfirmModal(
+      "Are you sure you want to remove this requirement?",
+      async () => {
+        try {
+          const key = `${paId}:${recId}`;
+          const req = reqMap.get(key);
+          if (!req) return;
 
-        // ✅ Detect "everything is MAYBE"
-        const ansValues = Object.values(answersByKrId || {}).filter(Boolean);
-        const hasAnyAnswers = ansValues.length > 0;
-        const allMaybe = hasAnyAnswers && ansValues.every((v) => v === "MAYBE");
+          const payload = {
+            reikalavimasId: req.id_Reikalavimas,
+            paId: req.fk_id_PA,
+            busena: "Cancelled",
+          };
 
-        // ✅ If ALL MAYBE => show ALL allowed recommendations as LOW
-        if (allMaybe) {
-          for (const rec of recMap.values()) {
-            if (isUniversalValue(rec.Ar_universali)) continue;
+          const res = await fetch(`${API_BASE}/api/pa-reikalavimai/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-            const recLevel = String(rec.Atitikties_lygis || "").trim().toUpperCase();
-            if (!allowedLevels.includes(recLevel)) continue;
+          const data = await res.json();
 
-            low.push({
-              ...rec,
-              probability: 0.29,
-              probabilityLevel: "L",
-            });
+          if (!res.ok || !data?.success) {
+            alert("Remove failed. Check server logs.");
+            return;
           }
 
-          const deduped = dedupeByWcagFamilies(low);
-          return { high: [], medium: [], low: deduped };
+          closeConfirmModal();
+          fetchAll();
+        } catch (e) {
+          console.error("Remove error:", e);
+          alert("Remove error.");
         }
+      }
+    );
+  };
 
-        // Normal logic when not "all MAYBE"
+  const classifyForPA = useCallback(
+    (answersByKrId) => {
+      let high = [];
+      let medium = [];
+      let low = [];
+
+      const ansValues = Object.values(answersByKrId || {}).filter(Boolean);
+      const hasAnyAnswers = ansValues.length > 0;
+      const allMaybe = hasAnyAnswers && ansValues.every((v) => v === "MAYBE");
+
+      if (allMaybe) {
         for (const rec of recMap.values()) {
           if (isUniversalValue(rec.Ar_universali)) continue;
 
           const recLevel = String(rec.Atitikties_lygis || "").trim().toUpperCase();
           if (!allowedLevels.includes(recLevel)) continue;
 
-          if (!Array.isArray(rec.rules) || rec.rules.length === 0) continue;
-
-          // special handling for 4.1.2
-          if (isRec412(rec)) {
-            const matched = rec.rules.some((ru) => {
-              const ans = answersByKrId[ru.KR_id];
-              if (!ans) return false;
-              return ru.expected ? ans === ru.expected : ans === "YES";
-            });
-            if (matched) high.push({ ...rec, probability: 1.0, probabilityLevel: "H" });
-            continue;
-          }
-
-          const matchedPs = [];
-          for (const ru of rec.rules) {
-            const ans = answersByKrId[ru.KR_id];
-            if (!ans) continue;
-            if (!ru.expected) continue;
-
-            if (ans !== ru.expected) continue;
-
-            const p = computeProbability(ru);
-            if (typeof p === "number" && !Number.isNaN(p)) matchedPs.push(p);
-          }
-
-          if (matchedPs.length === 0) continue;
-
-          const finalP = matchedPs.length === 1 ? matchedPs[0] : Math.max(...matchedPs);
-          const lvl = probToLevel(finalP);
-          if (!lvl) continue;
-
-          const recWithP = { ...rec, probability: finalP, probabilityLevel: lvl };
-
-          if (lvl === "H") high.push(recWithP);
-          else if (lvl === "M") medium.push(recWithP);
-          else if (lvl === "L") low.push(recWithP);
+          low.push({
+            ...rec,
+            probability: 0.29,
+            probabilityLevel: "L",
+          });
         }
 
-        const all = [...high, ...medium, ...low];
-        const dedupedAll = dedupeByWcagFamilies(all);
+        const deduped = dedupeByWcagFamilies(low);
+        return { high: [], medium: [], low: deduped };
+      }
 
-        high = dedupedAll.filter((r) => r.probabilityLevel === "H");
-        medium = dedupedAll.filter((r) => r.probabilityLevel === "M");
-        low = dedupedAll.filter((r) => r.probabilityLevel === "L");
+      for (const rec of recMap.values()) {
+        if (isUniversalValue(rec.Ar_universali)) continue;
 
-        return { high, medium, low };
-      },
-      [recMap, allowedLevels, dedupeByWcagFamilies, isUniversalValue, isRec412, computeProbability, probToLevel]
-    );
+        const recLevel = String(rec.Atitikties_lygis || "").trim().toUpperCase();
+        if (!allowedLevels.includes(recLevel)) continue;
 
-  /* ===============================
-     BUILD RESULTS
-  =============================== */
+        if (!Array.isArray(rec.rules) || rec.rules.length === 0) continue;
+
+        if (isRec412(rec)) {
+          const matched = rec.rules.some((ru) => {
+            const ans = answersByKrId[ru.KR_id];
+            if (!ans) return false;
+            return ru.expected ? ans === ru.expected : ans === "YES";
+          });
+          if (matched) high.push({ ...rec, probability: 1.0, probabilityLevel: "H" });
+          continue;
+        }
+
+        const matchedPs = [];
+        for (const ru of rec.rules) {
+          const ans = answersByKrId[ru.KR_id];
+          if (!ans) continue;
+          if (!ru.expected) continue;
+
+          if (ans !== ru.expected) continue;
+
+          const p = computeProbability(ru);
+          if (typeof p === "number" && !Number.isNaN(p)) matchedPs.push(p);
+        }
+
+        if (matchedPs.length === 0) continue;
+
+        const finalP = matchedPs.length === 1 ? matchedPs[0] : Math.max(...matchedPs);
+        const lvl = probToLevel(finalP);
+        if (!lvl) continue;
+
+        const recWithP = { ...rec, probability: finalP, probabilityLevel: lvl };
+
+        if (lvl === "H") high.push(recWithP);
+        else if (lvl === "M") medium.push(recWithP);
+        else if (lvl === "L") low.push(recWithP);
+      }
+
+      const all = [...high, ...medium, ...low];
+      const dedupedAll = dedupeByWcagFamilies(all);
+
+      high = dedupedAll.filter((r) => r.probabilityLevel === "H");
+      medium = dedupedAll.filter((r) => r.probabilityLevel === "M");
+      low = dedupedAll.filter((r) => r.probabilityLevel === "L");
+
+      return { high, medium, low };
+    },
+    [
+      recMap,
+      allowedLevels,
+      dedupeByWcagFamilies,
+      isUniversalValue,
+      isRec412,
+      computeProbability,
+      probToLevel,
+    ]
+  );
+
   const { general, perPA } = useMemo(() => {
     let generalList = [];
     for (const rec of recMap.values()) {
@@ -425,24 +464,21 @@ function Recommendations() {
 
     return { general: generalList, perPA: perPAList };
   }, [
-      recMap,
-      specs,
-      allowedLevels,
-      dedupeByWcagFamilies,
-      isUniversalValue,
-      normalizeAnswer,
-      classifyForPA,
+    recMap,
+    specs,
+    allowedLevels,
+    dedupeByWcagFamilies,
+    isUniversalValue,
+    normalizeAnswer,
+    classifyForPA,
   ]);
 
-  /* ===============================
-     CONFIRM
-  =============================== */
   const confirmRequirement = async ({ paId, recId, tikimybeLevel }) => {
     const key = `${paId}:${recId}`;
     setConfirmingKey(key);
 
     try {
-      const res = await fetch(`/api/requirements/create`, {
+      const res = await fetch(`${API_BASE}/api/requirements/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -490,7 +526,7 @@ function Recommendations() {
     try {
       await Promise.all(
         toConfirm.map((r) =>
-          fetch(`/api/requirements/create`, {
+          fetch(`${API_BASE}/api/requirements/create`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -516,59 +552,53 @@ function Recommendations() {
   };
 
   const cancelAllForPA = async (pa) => {
-  if (!pa?.id_PA) return;
+    if (!pa?.id_PA) return;
 
-  const paId = pa.id_PA;
+    const paId = pa.id_PA;
 
-  const combined = [...(pa.high || []), ...(pa.medium || []), ...(pa.low || [])];
+    const combined = [...(pa.high || []), ...(pa.medium || []), ...(pa.low || [])];
 
-  if (combined.length === 0) {
-    alert("Nothing to cancel for this use case.");
-    return;
-  }
+    if (combined.length === 0) {
+      alert("Nothing to cancel for this use case.");
+      return;
+    }
 
-  const ok = window.confirm(
-    `Cancel ${combined.length} recommendations for this use case?`
-  );
-  if (!ok) return;
+    const ok = window.confirm(`Cancel ${combined.length} recommendations for this use case?`);
+    if (!ok) return;
 
-  setConfirmingKey(`CANCEL:${paId}`);
+    setConfirmingKey(`CANCEL:${paId}`);
 
-  try {
-    await Promise.all(
-      combined.map((r) =>
-        fetch(`/api/requirements/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            
-            projectId: Number(projectId),
-            paId: Number(paId),
-            recommendationId: Number(r.id_Rekomendacija),
-            tikimybe: probToDb(r.probabilityLevel || null),
-            busena: "Cancelled",
-          }),
-        }).then(async (res) => {
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.success) {
-            throw new Error(`Failed to cancel recId=${r.id_Rekomendacija}`);
-          }
-        })
-      )
-    );
+    try {
+      await Promise.all(
+        combined.map((r) =>
+          fetch(`${API_BASE}/api/requirements/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              projectId: Number(projectId),
+              paId: Number(paId),
+              recommendationId: Number(r.id_Rekomendacija),
+              tikimybe: probToDb(r.probabilityLevel || null),
+              busena: "Cancelled",
+            }),
+          }).then(async (res) => {
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data?.success) {
+              throw new Error(`Failed to cancel recId=${r.id_Rekomendacija}`);
+            }
+          })
+        )
+      );
 
-    fetchAll();
-  } catch (e) {
-    console.error("Cancel all (PA) error:", e);
-    alert("Cancel failed. Check server logs.");
-  } finally {
-    setConfirmingKey(null);
-  }
-  };  
+      fetchAll();
+    } catch (e) {
+      console.error("Cancel all (PA) error:", e);
+      alert("Cancel failed. Check server logs.");
+    } finally {
+      setConfirmingKey(null);
+    }
+  };
 
-  /* ===============================
-     EDIT
-  =============================== */
   const openEdit = (paId, recId) => {
     const key = `${paId}:${recId}`;
     const req = reqMap.get(key);
@@ -586,6 +616,7 @@ function Recommendations() {
   const closeEdit = () => {
     setEditOpen(false);
     setEditRow(null);
+    setEditErrors({});
     setEditForm({
       busena: "To review",
       tenkinimo_kriterijus: "",
@@ -597,15 +628,24 @@ function Recommendations() {
   const saveEdit = async () => {
     if (!editRow) return;
 
-    if (!String(editForm.tenkinimo_kriterijus || "").trim())
-      return alert("Tenkinimo kriterijus is required.");
-    if (String(editForm.prioritetas || "").trim() === "")
-      return alert("Prioritetas is required.");
-    if (!String(editForm.patikslinta_formuluote || "").trim())
-      return alert("Patikslinta formuluote is required.");
+    const nextErrors = {};
+
+    if (!String(editForm.tenkinimo_kriterijus || "").trim()) {
+      nextErrors.tenkinimo_kriterijus = "Conformance is required.";
+    }
+
+    if (String(editForm.prioritetas || "").trim() === "") {
+      nextErrors.prioritetas = "Priority is required.";
+    }
+
+    if (!String(editForm.patikslinta_formuluote || "").trim()) {
+      nextErrors.patikslinta_formuluote = "Clarified definition is required.";
+    }
+
+    setEditErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setEditForm((p) => ({ ...p, busena: "Reviewed" }));
-
     setSavingEdit(true);
 
     const payload = {
@@ -618,7 +658,7 @@ function Recommendations() {
     };
 
     try {
-      const res = await fetch(`/api/pa-reikalavimai/update`, {
+      const res = await fetch(`${API_BASE}/api/pa-reikalavimai/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -643,12 +683,9 @@ function Recommendations() {
     }
   };
 
-  /* ===============================
-     SAVE PROJECT
-  =============================== */
   const saveProject = async () => {
     try {
-      const res = await fetch(`/api/project/${projectId}/api/projects/save`, {
+      const res = await fetch(`${API_BASE}/api/projects/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: Number(projectId) }),
@@ -657,8 +694,14 @@ function Recommendations() {
       const data = await res.json();
 
       if (data.success) {
-        alert("Project successfully saved!");
-        window.location.href = "/myprojects";
+        navigate("/myprojects", {
+          state: {
+            banner: {
+              type: "success",
+              message: "✅ Project saved successfully.",
+            },
+          },
+        });
       } else {
         alert("Saving failed.");
       }
@@ -668,83 +711,79 @@ function Recommendations() {
     }
   };
 
-  /* ===============================
-     TABLE UI
-  =============================== */
-const renderTable = (list, showProbability = true, paId = null, variant = "") => (
-  <div className="rec-table-wrap">
-    <table className={`rec-table ${variant ? `rec-table--${variant}` : ""}`}>
-      <thead>
-        <tr>
-          <th>Recommendation</th>
-          <th>Goal</th>
-          {showProbability ? <th>Probability</th> : null}
-          {paId ? <th>Status</th> : null}
-          {paId ? <th>Action</th> : null}
-        </tr>
-      </thead>
-      <tbody>
-        {sortByWcagCode(list, (r) => r.Formuluote).map((r) => {
-          const key = paId ? `${paId}:${r.id_Rekomendacija}` : null;
-          const req = key ? reqMap.get(key) : null;
+  const renderTable = (list, showProbability = true, paId = null, variant = "") => (
+    <div className="rec-table-wrap">
+      <table className={`rec-table ${variant ? `rec-table--${variant}` : ""}`}>
+        <thead>
+          <tr>
+            <th>Recommendation</th>
+            <th>Goal</th>
+            {showProbability ? <th>Probability</th> : null}
+            {paId ? <th>Status</th> : null}
+            {paId ? <th>Action</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {sortByWcagCode(list, (r) => r.Formuluote).map((r) => {
+            const key = paId ? `${paId}:${r.id_Rekomendacija}` : null;
+            const req = key ? reqMap.get(key) : null;
 
-          const isDone = key ? !!confirmed[key] : false;
-          const isLoading = key ? confirmingKey === key || confirmingKey === `ALL:${paId}` : false;
+            const isDone = key ? !!confirmed[key] : false;
+            const isLoading = key ? confirmingKey === key || confirmingKey === `ALL:${paId}` : false;
 
-          const status = req?.Busena || (isDone ? "To review" : "-");
+            const status = req?.Busena || (isDone ? "To review" : "-");
 
-          return (
-            <tr key={r.id_Rekomendacija}>
-              <td>{r.Formuluote}</td>
-              <td>{r.Tikslas}</td>
+            return (
+              <tr key={r.id_Rekomendacija}>
+                <td>{r.Formuluote}</td>
+                <td>{r.Tikslas}</td>
 
-              {showProbability ? (
-                <td>
-                  {r.probabilityLevel || "-"} |{" "}
-                  {typeof r.probability === "number" ? r.probability.toFixed(2) : "-"}
-                </td>
-              ) : null}
+                {showProbability ? (
+                  <td>
+                    {r.probabilityLevel || "-"} |{" "}
+                    {typeof r.probability === "number" ? r.probability.toFixed(2) : "-"}
+                  </td>
+                ) : null}
 
-              {paId ? <td>{status}</td> : null}
+                {paId ? <td>{status}</td> : null}
 
-              {paId ? (
-                <td>
-                  {!isDone ? (
-                    <button
-                      className="confirm-btn"
-                      disabled={isLoading}
-                      onClick={() =>
-                        confirmRequirement({
-                          paId,
-                          recId: r.id_Rekomendacija,
-                          tikimybeLevel: r.probabilityLevel || null,
-                        })
-                      }
-                    >
-                      {isLoading ? "Confirming..." : "Confirm"}
-                    </button>
-                  ) : (
-                    <button
-                      className="confirm-btn"
-                      onClick={() => openEdit(paId, r.id_Rekomendacija)}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </td>
-              ) : null}
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+                {paId ? (
+                  <td>
+                    {!isDone ? (
+                      <button
+                        className="confirm-btn"
+                        disabled={isLoading}
+                        onClick={() =>
+                          confirmRequirement({
+                            paId,
+                            recId: r.id_Rekomendacija,
+                            tikimybeLevel: r.probabilityLevel || null,
+                          })
+                        }
+                      >
+                        {isLoading ? "Confirming..." : "Confirm"}
+                      </button>
+                    ) : (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="confirm-btn" onClick={() => openEdit(paId, r.id_Rekomendacija)}>
+                          Edit
+                        </button>
 
+                        <button className="confirm-btn confirm-btn--remove" onClick={() => removeRequirement(paId, r.id_Rekomendacija)}>
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                ) : null}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 
-  /* ===============================
-     PAGE RENDER
-  =============================== */
   return (
     <div className="recommendations-wrapper">
       <h2 className="project-title">Accessibility Recommendations</h2>
@@ -763,7 +802,7 @@ const renderTable = (list, showProbability = true, paId = null, variant = "") =>
         <>
           <section>
             <h2>General</h2>
-              {general.length === 0 ? <p>No general recommendations.</p> : renderTable(general, false, null, "general")}
+            {general.length === 0 ? <p>No general recommendations.</p> : renderTable(general, false, null, "general")}
           </section>
 
           {perPA.length === 0 ? (
@@ -791,50 +830,57 @@ const renderTable = (list, showProbability = true, paId = null, variant = "") =>
                   </div>
                 </div>
 
-                  {!isPACollapsed(pa.id_PA) && (
-                    <>
-                      {pa.charakteristika ? <p className="pa-desc">Description: {pa.charakteristika}</p> : null}
+                {!isPACollapsed(pa.id_PA) && (
+                  <>
+                    {pa.charakteristika ? <p className="pa-desc">Description: {pa.charakteristika}</p> : null}
 
-                        <div className="pa-probability-header">
-                          <h3>High probability (H)</h3>
-
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button
-                              type="button"
-                              className="accept-all-pa-btn"
-                              disabled={confirmingKey === `ALL:${pa.id_PA}`}
-                              onClick={() => confirmAllForPA(pa)}
-                              title="Confirm all recommendations for this use case (H+M+L)"
-                            >
-                              {confirmingKey === `ALL:${pa.id_PA}` ? "Accepting..." : "Accept all"}
-                            </button>
-
-                            <button
-                              type="button"
-                              className="cancel-all-pa-btn"
-                              disabled={confirmingKey === `CANCEL:${pa.id_PA}`}
-                              onClick={() => cancelAllForPA(pa)}
-                              title="Cancel all recommendations for this use case"
-                            >
-                              {confirmingKey === `CANCEL:${pa.id_PA}` ? "Cancelling..." : "Cancel all"}
-                            </button>
-                          </div>
-                        </div>
-
-                      {pa.high.length === 0
-                        ? <p>No high-probability recommendations.</p>
-                        : renderTable(pa.high, true, pa.id_PA, "equal")}
-
+                    <div className="pa-probability-header">
                       <h3>High probability (H)</h3>
-                      {pa.high.length === 0 ? <p>No high-probability recommendations.</p> : renderTable(pa.high, true, pa.id_PA, "equal")}
 
-                      <h3>Medium probability (M)</h3>
-                      {pa.medium.length === 0 ? <p>No medium-probability recommendations.</p> : renderTable(pa.medium, true, pa.id_PA, "equal")}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          className="accept-all-pa-btn"
+                          disabled={confirmingKey === `ALL:${pa.id_PA}`}
+                          onClick={() => confirmAllForPA(pa)}
+                          title="Confirm all recommendations for this use case (H+M+L)"
+                        >
+                          {confirmingKey === `ALL:${pa.id_PA}` ? "Confirming..." : "Confirm all"}
+                        </button>
 
-                      <h3>Low probability (L)</h3>
-                      {pa.low.length === 0 ? <p>No low-probability recommendations.</p> : renderTable(pa.low, true, pa.id_PA, "equal")}
-                    </>
-                  )}
+                        <button
+                          type="button"
+                          className="cancel-all-pa-btn"
+                          disabled={confirmingKey === `CANCEL:${pa.id_PA}`}
+                          onClick={() => cancelAllForPA(pa)}
+                          title="Cancel all recommendations for this use case"
+                        >
+                          {confirmingKey === `CANCEL:${pa.id_PA}` ? "Cancelling..." : "Cancel all"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {pa.high.length === 0 ? (
+                      <p>No high-probability recommendations.</p>
+                    ) : (
+                      renderTable(pa.high, true, pa.id_PA, "equal")
+                    )}
+
+                    <h3>Medium probability (M)</h3>
+                    {pa.medium.length === 0 ? (
+                      <p>No medium-probability recommendations.</p>
+                    ) : (
+                      renderTable(pa.medium, true, pa.id_PA, "equal")
+                    )}
+
+                    <h3>Low probability (L)</h3>
+                    {pa.low.length === 0 ? (
+                      <p>No low-probability recommendations.</p>
+                    ) : (
+                      renderTable(pa.low, true, pa.id_PA, "equal")
+                    )}
+                  </>
+                )}
               </section>
             ))
           )}
@@ -847,77 +893,131 @@ const renderTable = (list, showProbability = true, paId = null, variant = "") =>
         </>
       )}
 
-      {/* EDIT MODAL */}
-    {editOpen && editRow ? (
-      <div className="modal-overlay" onClick={closeEdit}>
-        <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2 className="modal-title">Edit requirement</h2>
-            <button
-              type="button"
-              className="modal-x"
-              onClick={closeEdit}
-              disabled={savingEdit}
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="modal-body">
-            <label className="modal-label">
-              Conformance <span className="req">*</span>
-              <textarea
-                className="modal-textarea"
-                value={editForm.tenkinimo_kriterijus}
-                onChange={(e) =>
-                  setEditForm((p) => ({ ...p, tenkinimo_kriterijus: e.target.value }))
-                }
-                rows={3}
-              />
-            </label>
-
-            <label className="modal-label">
-              Priority <span className="req">*</span>
-              <select
-                className="modal-select"
-                value={editForm.prioritetas}
-                onChange={(e) =>
-                  setEditForm((p) => ({ ...p, prioritetas: e.target.value }))
-                }
+      {editOpen && editRow ? (
+        <div className="modal-overlay" onClick={closeEdit}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Edit requirement</h2>
+              <button
+                type="button"
+                className="modal-x"
+                onClick={closeEdit}
+                disabled={savingEdit}
+                aria-label="Close"
               >
-                <option value="1">1 (Highest)</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5 (Lowest)</option>
-              </select>
-            </label>
+                ×
+              </button>
+            </div>
 
-            <label className="modal-label">
-              Clarified definition <span className="req">*</span>
-              <textarea
-                className="modal-textarea"
-                value={editForm.patikslinta_formuluote}
-                onChange={(e) =>
-                  setEditForm((p) => ({ ...p, patikslinta_formuluote: e.target.value }))
-                }
-                rows={4}
-              />
-            </label>
-          </div>
+            <div className="modal-body">
+              <label className="modal-label">
+                Conformance <span className="req">*</span>
+                  <textarea
+                    className={`modal-textarea ${editErrors.tenkinimo_kriterijus ? "modal-input-error" : ""}`}
+                    value={editForm.tenkinimo_kriterijus}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditForm((p) => ({ ...p, tenkinimo_kriterijus: v }));
+                      setEditErrors((prev) => ({ ...prev, tenkinimo_kriterijus: "" }));
+                    }}
+                    rows={3}
+                  />
+                  {editErrors.tenkinimo_kriterijus && (
+                    <div className="modal-field-error">{editErrors.tenkinimo_kriterijus}</div>
+                  )}
+              </label>
 
-          <div className="modal-actions">
-            <button type="button" className="modal-btn modal-btn--ghost" onClick={closeEdit} disabled={savingEdit}>
-              Cancel
-            </button>
-            <button type="button" className="modal-btn modal-btn--primary" onClick={saveEdit} disabled={savingEdit}>
-              {savingEdit ? "Saving..." : "Save"}
-            </button>
+              <label className="modal-label">
+                Priority <span className="req">*</span>
+                  <select
+                    className={`modal-select ${editErrors.prioritetas ? "modal-input-error" : ""}`}
+                    value={editForm.prioritetas}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditForm((p) => ({ ...p, prioritetas: v }));
+                      setEditErrors((prev) => ({ ...prev, prioritetas: "" }));
+                    }}
+                  >
+                    <option value="1">1 (Highest)</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5 (Lowest)</option>
+                  </select>
+                  {editErrors.prioritetas && (
+                    <div className="modal-field-error">{editErrors.prioritetas}</div>
+                  )}
+              </label>
+
+              <label className="modal-label">
+                Clarified definition <span className="req">*</span>
+                  <textarea
+                    className={`modal-textarea ${editErrors.patikslinta_formuluote ? "modal-input-error" : ""}`}
+                    value={editForm.patikslinta_formuluote}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditForm((p) => ({ ...p, patikslinta_formuluote: v }));
+                      setEditErrors((prev) => ({ ...prev, patikslinta_formuluote: "" }));
+                    }}
+                    rows={4}
+                  />
+                  {editErrors.patikslinta_formuluote && (
+                    <div className="modal-field-error">{editErrors.patikslinta_formuluote}</div>
+                  )}
+              </label>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="modal-btn modal-btn--ghost"
+                onClick={closeEdit}
+                disabled={savingEdit}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal-btn modal-btn--primary"
+                onClick={saveEdit}
+                disabled={savingEdit}
+              >
+                {savingEdit ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    ) : null}
+      ) : null}
+      {confirmModal.open && (
+        <div className="modal-overlay" onClick={closeConfirmModal}>
+          <div
+            className="modal-card modal-card--small"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-body">
+              <p>{confirmModal.message}</p>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="modal-btn modal-btn--ghost"
+                onClick={closeConfirmModal}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="modal-btn modal-btn--danger"
+                onClick={() => confirmModal.onConfirm?.()}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

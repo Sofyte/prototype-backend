@@ -18,8 +18,8 @@ function Specifications() {
   ]);
 
   const [loadingKR, setLoadingKR] = useState(true);
+  const [paErrors, setPaErrors] = useState({});
 
-  // === LOAD KR LIST ===
   useEffect(() => {
     fetch("http://localhost:5000/api/kr")
       .then((res) => res.json())
@@ -31,26 +31,41 @@ function Specifications() {
   }, []);
 
   const addPA = () => {
+    const newId = Date.now();
     setProjectAspects((prev) => [
       ...prev,
       {
-        id: Date.now(),
+        id: newId,
         PA_kodas: "",
         pavadinimas: "",
         charakteristika: "",
         krValues: {},
       },
     ]);
+
+    setPaErrors((prev) => ({ ...prev, [newId]: {} }));
   };
 
   const removePA = (paId) => {
     setProjectAspects((prev) => prev.filter((pa) => pa.id !== paId));
+    setPaErrors((prev) => {
+      const copy = { ...prev };
+      delete copy[paId];
+      return copy;
+    });
   };
 
   const setPAField = (paId, field, value) => {
     setProjectAspects((prev) =>
       prev.map((pa) => (pa.id === paId ? { ...pa, [field]: value } : pa))
     );
+
+    if (field === "PA_kodas" || field === "pavadinimas") {
+      setPaErrors((prev) => ({
+        ...prev,
+        [paId]: { ...(prev[paId] || {}), [field]: "" },
+      }));
+    }
   };
 
   const setKRValue = (paId, krId, gkrId) => {
@@ -85,17 +100,33 @@ function Specifications() {
     );
   };
 
-  const saveAll = async () => {
+  const validateAll = () => {
+    const nextErrors = {};
+
     for (const pa of projectAspects) {
-      if (!pa.PA_kodas.trim()) {
-        alert("Each PA must have a CODE!");
-        return;
-      }
-      if (!pa.pavadinimas.trim()) {
-        alert("Each PA must have a NAME!");
-        return;
+      const paErr = {};
+
+      if (!String(pa.PA_kodas || "").trim()) {
+        paErr.PA_kodas = "Please enter the use-case code.";
       }
 
+      if (!String(pa.pavadinimas || "").trim()) {
+        paErr.pavadinimas = "Please enter the use-case name.";
+      }
+
+      if (Object.keys(paErr).length > 0) {
+        nextErrors[pa.id] = paErr;
+      }
+    }
+
+    setPaErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const saveAll = async () => {
+    if (!validateAll()) return;
+
+    for (const pa of projectAspects) {
       const paRes = await fetch("http://localhost:5000/api/pa/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,7 +159,6 @@ function Specifications() {
       });
     }
 
-    alert("Project aspects successfully saved!");
     navigate(`/recommendations/${projectId}`);
   };
 
@@ -145,23 +175,35 @@ function Specifications() {
 
           <div className="pa-inputs">
             <div className="pa-field">
-              <label>Use-case code</label>
+              <label>Use-case code*</label>
               <input
                 type="text"
                 value={pa.PA_kodas}
                 onChange={(e) => setPAField(pa.id, "PA_kodas", e.target.value)}
+                className={paErrors?.[pa.id]?.PA_kodas ? "pa-input-error" : ""}
               />
+              {paErrors?.[pa.id]?.PA_kodas && (
+                <div className="pa-field-error">
+                  {paErrors[pa.id].PA_kodas}
+                </div>
+              )}
             </div>
 
             <div className="pa-field">
-              <label>Name</label>
+              <label>Name*</label>
               <input
                 type="text"
                 value={pa.pavadinimas}
                 onChange={(e) =>
                   setPAField(pa.id, "pavadinimas", e.target.value)
                 }
+                className={paErrors?.[pa.id]?.pavadinimas ? "pa-input-error" : ""}
               />
+              {paErrors?.[pa.id]?.pavadinimas && (
+                <div className="pa-field-error">
+                  {paErrors[pa.id].pavadinimas}
+                </div>
+              )}
             </div>
 
             <div className="pa-field description">
@@ -272,8 +314,8 @@ function Specifications() {
 
           <div className="card-footer">
             <button className="remove-pa-btn" onClick={() => removePA(pa.id)}>
-                Remove
-              </button>
+              Remove
+            </button>
             <button className="add-pa-btn" onClick={addPA}>
               + Add another use-case
             </button>

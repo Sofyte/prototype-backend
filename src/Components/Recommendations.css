@@ -1,22 +1,36 @@
-/* ================================
-   GLOBAL WRAPPER (CENTERED CONTENT)
-================================ */
-
 .recommendations-wrapper {
   max-width: 1000px;
   margin: 0 auto;
   padding: 0 10px;
-
-  /* REMOVE secondary-card appearance */
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
 }
 
+.confirm-btn--remove {
+  background: #d93025;
+  color: #fff;
+  border: 1px solid #d93025;
+  white-space: nowrap;
+}
 
-/* ================================
-   HEADINGS
-================================ */
+.confirm-btn--remove:hover {
+  background: #b32018;
+}
+
+.modal-card--small {
+  width: min(420px, 100%);
+}
+
+.modal-btn--danger {
+  background: #d93025;
+  border: 1px solid #d93025;
+  color: #fff;
+}
+
+.modal-btn--danger:hover {
+  background: #b32018;
+}
 
 .recommendations-wrapper h1 {
   font-size: 30px;
@@ -43,37 +57,25 @@
   color: #005fa3;
 }
 .recommendations-wrapper h1 {
-  margin-top: -10px;   /* pakelia antraštę aukštyn */
+  margin-top: -10px;
   margin-bottom: 18px;
 }
-
-/* ================================
-   PARAGRAPHS
-================================ */
 
 .recommendations-wrapper p {
   font-size: 13px;
   color: #333;
 }
 
-
-/* ================================
-   TABLE STYLING
-================================ */
-
 .rec-table {
   width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   margin-top: 8px;
   background: white;
   border-radius: 10px;
-  overflow: hidden;
-
-  /* soft shadow for floating table look */
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-/* header row */
 .rec-table th {
   background: #e6f0ff;
   padding: 10px 16px;
@@ -84,7 +86,6 @@
   text-align: left;
 }
 
-/* cells */
 .rec-table td {
   padding: 10px 16px;
   font-size: 14px;
@@ -94,20 +95,13 @@
   line-height: 1.35;
 }
 
-/* remove bottom border from last row */
 .rec-table tr:last-child td {
   border-bottom: none;
 }
 
-/* hover effect */
 .rec-table tr:hover td {
   background: #f7fbff;
 }
-
-
-/* ================================
-   COLUMN SIZING & ALIGNMENT
-================================ */
 
 .rec-table--general th:nth-child(1),
 .rec-table--general td:nth-child(1) {
@@ -120,10 +114,8 @@
 }
 
 
-/* Level column */
 .rec-table th:last-child,
 .rec-table td:last-child {
-  width: 140px;
   text-align: left;
 }
 
@@ -138,7 +130,6 @@
   word-break: break-word;
 }
 
-/* Goal column (biggest text) */
 .rec-table td:nth-child(3) {
   width: 50%;
   line-height: 1.35;
@@ -179,10 +170,6 @@
   margin-bottom: 25px;
   margin-top: 25px;
 }
-
-/* ================================
-   PA COLLAPSIBLE HEADER
-================================ */
 
 .pa-collapse-header {
   margin-top: 18px;
@@ -243,6 +230,7 @@
   cursor: pointer;
   border-radius: 5px;
   border: solid 1px rgb(97, 96, 96);
+  white-space: nowrap;
 }
 
 .confirm-btn:hover {
@@ -262,6 +250,11 @@
 .pa-actions-row .pa-desc {
   margin: 0;
   flex: 1;
+}
+
+.pa-desc {
+  margin-top: 5px;
+  padding: 10px;
 }
 
 .accept-all-pa-btn {
@@ -300,10 +293,6 @@
 .cancel-all-pa-btn:hover {
   background: hsl(0, 90%, 64%);
 }
-
-/* ================================
-   EDIT MODAL
-================================ */
 
 .modal-overlay {
   position: fixed;
@@ -380,7 +369,7 @@
   width: 100%;
   margin-top: 6px;
 
-  border: 2px solid #d00;
+  border: 1px solid #ccc;
   border-radius: 10px;
   padding: 10px 12px;
 
@@ -445,5 +434,38 @@
 .modal-x:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.modal-field-error {
+  color: #d93025;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.modal-input-error {
+  border-color: #d93025 !important;
+}
+
+.modal-input-error:focus {
+  border-color: #d93025 !important;
+  box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.12) !important;
+}
+
+@media (max-width: 1440px) {
+  .rec-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+  }
+
+  .rec-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1080px;
+    background: #ffffff;
+  }
 }
 

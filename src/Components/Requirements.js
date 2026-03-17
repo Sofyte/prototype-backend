@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { useParams, Link } from "react-router-dom";
 import "./Requirements.css";
 
@@ -10,8 +12,13 @@ function Requirements() {
   const [projectLevel, setProjectLevel] = useState("-");
   const [bulkKey, setBulkKey] = useState(null);
 
-  // ✅ collapse per PA: key = paId => true/false
   const [collapsedPA, setCollapsedPA] = useState({});
+
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    message: "",
+    onConfirm: null,
+  });
 
   const togglePA = (paId) => {
     setCollapsedPA((prev) => ({ ...prev, [paId]: !prev[paId] }));
@@ -19,7 +26,6 @@ function Requirements() {
 
   const isPACollapsed = (paId) => !!collapsedPA[paId];
 
-  // edit modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -29,6 +35,7 @@ function Requirements() {
     patikslinta_formuluote: "",
     atmetimo_priezastis: "",
   });
+  const [editErrors, setEditErrors] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchAll = useCallback(() => {
@@ -62,7 +69,6 @@ function Requirements() {
     fetchAll();
   }, [fetchAll]);
 
-  // Grupavimas pagal PA (use case)
   const grouped = useMemo(() => {
     const map = new Map();
 
@@ -116,9 +122,6 @@ function Requirements() {
       .map((x) => x.item);
   };
 
-  /* ===============================
-     EDIT
-  =============================== */
   const openEdit = (row) => {
     setEditRow(row);
 
@@ -136,6 +139,7 @@ function Requirements() {
   const closeEdit = () => {
     setEditOpen(false);
     setEditRow(null);
+    setEditErrors({});
     setEditForm({
       busena: "To review",
       tenkinimo_kriterijus: "",
@@ -145,34 +149,90 @@ function Requirements() {
     });
   };
 
+  const declineRequirement = (row) => {
+    openConfirmModal(
+      "Are you sure you want to decline this requirement?",
+      async () => {
+        try {
+          const payload = {
+            reikalavimasId: row.id_Reikalavimas,
+            paId: row.fk_id_PA,
+            busena: "Cancelled",
+            tenkinimo_kriterijus: row.Tenkinimo_kriterijus || "",
+            prioritetas: String(row.Prioritetas ?? "3"),
+            patikslinta_formuluote: row.Patikslinta_formuluote || "",
+            atmetimo_priezastis: "Declined manually",
+          };
+
+          const res = await fetch(
+            "http://localhost:5000/api/pa-reikalavimas/update",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok || !data?.success) {
+            alert("Decline failed. Check server logs.");
+            return;
+          }
+
+          closeConfirmModal();
+          fetchAll();
+        } catch (e) {
+          alert("Decline error.");
+        }
+      }
+    );
+  };
+
+  const openConfirmModal = (message, onConfirm) => {
+    setConfirmModal({
+      open: true,
+      message,
+      onConfirm,
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      open: false,
+      message: "",
+      onConfirm: null,
+    });
+  };
+
   const saveEdit = async () => {
     if (!editRow) return;
 
-    // paprastos validacijos (kaip pas tave)
+    const nextErrors = {};
+
     if (!String(editForm.tenkinimo_kriterijus || "").trim()) {
-      alert("Tenkinimo kriterijus is required.");
-      return;
+      nextErrors.tenkinimo_kriterijus = "Conformance criteria is required.";
     }
     if (String(editForm.prioritetas ?? "").toString().trim() === "") {
-      alert("Prioritetas is required.");
-      return;
+      nextErrors.prioritetas = "Priority is required.";
     }
     if (!String(editForm.patikslinta_formuluote || "").trim()) {
-      alert("Patikslinta formuluote is required.");
-      return;
+      nextErrors.patikslinta_formuluote = "Clarified definition is required.";
     }
+
+    setEditErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setSavingEdit(true);
 
     const payload = {
-      reikalavimasId: editRow.fk_id_Reikalavimas || editRow.id_Reikalavimas, // saugiai
+      reikalavimasId: editRow.id_Reikalavimas,
       paId: editRow.fk_id_PA,
-      busena: editForm.busena,
+      busena: "Reviewed",
       tenkinimo_kriterijus: editForm.tenkinimo_kriterijus,
       prioritetas: editForm.prioritetas,
       patikslinta_formuluote: editForm.patikslinta_formuluote,
-      atmetimo_priezastis:
-        editForm.busena === "Cancelled" ? editForm.atmetimo_priezastis : null,
+      atmetimo_priezastis: null,
     };
 
     try {
@@ -188,7 +248,6 @@ function Requirements() {
         : { raw: await res.text() };
 
       if (!res.ok || !data?.success) {
-        console.error("Edit save failed:", res.status, data);
         alert(`Edit save failed (${res.status}). Check server logs.`);
         return;
       }
@@ -201,6 +260,40 @@ function Requirements() {
     } finally {
       setSavingEdit(false);
     }
+  };
+
+  const exportToExcel = () => {
+    if (!rows || rows.length === 0) return;
+
+    const exportData = rows.map((r) => ({
+      "Use Case Code": r.PA_kodas,
+      "Use Case Name": r.PA_pavadinimas,
+      "Recommendation": r.Formuluote,
+      "Goal": r.Tikslas,
+      "WCAG Level": r.Atitikties_lygis,
+      "Probability": r.Tikimybe,
+      "Status": r.Busena,
+      "Priority": r.Prioritetas,
+      "Updated": r.Koregavimo_data
+        ? new Date(r.Koregavimo_data).toLocaleDateString()
+        : "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Requirements");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array"
+    });
+
+    const data = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+
+    saveAs(data, `project_${projectId}_requirements.xlsx`);
   };
 
   const confirmAllForPA = async (g) => {
@@ -253,7 +346,6 @@ function Requirements() {
 
       fetchAll();
     } catch (e) {
-      console.error("Confirm all (PA) error:", e);
       alert("Confirm all failed. Check server logs.");
     } finally {
       setBulkKey(null);
@@ -310,7 +402,6 @@ function Requirements() {
 
       fetchAll();
     } catch (e) {
-      console.error("Decline all (PA) error:", e);
       alert("Decline all failed. Check server logs.");
     } finally {
       setBulkKey(null);
@@ -319,9 +410,9 @@ function Requirements() {
 
   return (
     <div className="req-wrapper">
+      <h2 className="req-title">Project Requirements</h2>
       <div className="req-header">
         <div>
-          <h1 className="req-title">Project Requirements</h1>
           <h3>Project name: {projectName}</h3>
           <h3>Project ID: {projectId}</h3>
           <h4>Conformance level: {projectLevel}</h4>
@@ -339,11 +430,9 @@ function Requirements() {
       ) : (
         grouped.map((g) => {
           const paId = g?.fk_id_PA ?? "unknown";
-
           return (
             <section
               key={paId ?? g.PA_kodas ?? `pa-${Math.random()}`}
-              className="req-section"
             >
               {/* ✅ COLLAPSIBLE HEADER */}
               <div
@@ -425,9 +514,21 @@ function Requirements() {
                             </td>
 
                             <td>
-                              <button className="req-edit-btn" onClick={() => openEdit(r)}>
-                                Edit
-                              </button>
+                              <div className="req-action-group">
+                                <button
+                                  className="req-edit-btn"
+                                  onClick={() => openEdit(r)}
+                                >
+                                  Edit
+                                </button>
+
+                                <button
+                                  className="req-edit-btn req-decline-btn"
+                                  onClick={() => declineRequirement(r)}
+                                >
+                                  Decline
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -441,7 +542,6 @@ function Requirements() {
         })
       )}
 
-      {/* EDIT MODAL */}
       {editOpen && editRow ? (
         <div className="modal-overlay" onClick={closeEdit}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -485,49 +585,58 @@ function Requirements() {
 
               <label className="modal-label">
                 Conformance criteria <span className="req">*</span>
-                <textarea
-                  className="modal-textarea"
-                  value={editForm.tenkinimo_kriterijus}
-                  onChange={(e) =>
-                    setEditForm((p) => ({
-                      ...p,
-                      tenkinimo_kriterijus: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                />
+                  <textarea
+                    className={`modal-textarea ${editErrors.tenkinimo_kriterijus ? "modal-input-error" : ""}`}
+                    value={editForm.tenkinimo_kriterijus}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditForm((p) => ({ ...p, tenkinimo_kriterijus: v }));
+                      setEditErrors((prev) => ({ ...prev, tenkinimo_kriterijus: "" }));
+                    }}
+                    rows={3}
+                  />
+                  {editErrors.tenkinimo_kriterijus && (
+                    <div className="modal-field-error">{editErrors.tenkinimo_kriterijus}</div>
+                  )}
               </label>
 
               <label className="modal-label">
                 Priority <span className="req">*</span>
-                <select
-                  className="modal-select"
-                  value={editForm.prioritetas}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, prioritetas: e.target.value }))
-                  }
-                >
-                  <option value="1">1 (Highest)</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5 (Lowest)</option>
-                </select>
+                      <select
+                        className={`modal-select ${editErrors.prioritetas ? "modal-input-error" : ""}`}
+                        value={editForm.prioritetas}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setEditForm((p) => ({ ...p, prioritetas: v }));
+                          setEditErrors((prev) => ({ ...prev, prioritetas: "" }));
+                        }}
+                      >
+                        <option value="1">1 (Highest)</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5 (Lowest)</option>
+                      </select>
+                      {editErrors.prioritetas && (
+                        <div className="modal-field-error">{editErrors.prioritetas}</div>
+                      )}
               </label>
 
               <label className="modal-label">
                 Clarified definition <span className="req">*</span>
-                <textarea
-                  className="modal-textarea"
-                  value={editForm.patikslinta_formuluote}
-                  onChange={(e) =>
-                    setEditForm((p) => ({
-                      ...p,
-                      patikslinta_formuluote: e.target.value,
-                    }))
-                  }
-                  rows={4}
-                />
+                    <textarea
+                      className={`modal-textarea ${editErrors.patikslinta_formuluote ? "modal-input-error" : ""}`}
+                      value={editForm.patikslinta_formuluote}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditForm((p) => ({ ...p, patikslinta_formuluote: v }));
+                        setEditErrors((prev) => ({ ...prev, patikslinta_formuluote: "" }));
+                      }}
+                      rows={4}
+                    />
+                    {editErrors.patikslinta_formuluote && (
+                      <div className="modal-field-error">{editErrors.patikslinta_formuluote}</div>
+                    )}
               </label>
             </div>
 
@@ -552,7 +661,43 @@ function Requirements() {
           </div>
         </div>
       ) : null}
+      {confirmModal.open && (
+        <div className="modal-overlay" onClick={closeConfirmModal}>
+          <div
+            className="modal-card modal-card--small"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-body">
+              <p>{confirmModal.message}</p>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="modal-btn modal-btn--ghost"
+                onClick={closeConfirmModal}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="modal-btn modal-btn--danger"
+                onClick={confirmModal.onConfirm}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+        <div className="req-export-actions">
+          <button className="req-export-btn" onClick={exportToExcel}>
+            Export to Excel
+          </button>
+        </div>
     </div>
+    
   );
 }
 

@@ -49,14 +49,12 @@ function Navbar() {
             <li className="nav-item">
               <NavLink to="/myprojects" className={({ isActive }) => isActive ? 'nav-links active' : 'nav-links'} onClick={closeMobileMenu}>Projects</NavLink>
             </li>
-            <li className="nav-item">
-              <NavLink to="/create" className={({ isActive }) => isActive ? 'nav-links active' : 'nav-links'} onClick={closeMobileMenu}>Create new</NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink to="/sign-up" className="nav-links-mobile" onClick={closeMobileMenu}>Sign up</NavLink>
-            </li>
           </ul>
-          {button && <Button buttonStyle="btn--outline">SIGN UP</Button>}
+          {button && (
+            <NavLink to="/create">
+              <Button buttonStyle="btn--outline">CREATE NEW</Button>
+            </NavLink>
+          )}
         </div>
       </div>
     </nav>

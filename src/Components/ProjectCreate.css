@@ -1,10 +1,6 @@
-/* ========================== */
-/* MAIN CONTENT WRAPPER (from layout) */
-/* ========================== */
-
 .create-project {
   padding: 20px 5px;
-  padding-top: 0;     /* tik tarpai — NEBEKURIA kitos kortos */
+  padding-top: 0;
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
@@ -18,9 +14,33 @@
   font-weight: bold;
 }
 
-/* ========================== */
-/* FORM */
-/* ========================== */
+.field-error {
+  color: #d93025;
+  font-size: 13px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.input-error {
+  border: 1px solid #d93025 !important;
+}
+
+.input-error:focus {
+  border-color: #d93025 !important;
+  box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.12) !important;
+}
+
+.checkbox-error .custom-checkbox {
+  border-color: #d93025;
+}
+
+.checkbox-error .level-checkbox:checked + .custom-checkbox {
+  border-color: #d93025;
+}
+
+.checkbox-error .level-checkbox:checked + .custom-checkbox::after {
+  background-color: #d93025;
+}
 
 .project-form {
   display: grid;
@@ -29,7 +49,7 @@
   column-gap: 30px;
   row-gap: 20px;
 
-  background: transparent !important;  /* no card */
+  background: transparent !important;
 }
 
 .project-form label {
@@ -40,7 +60,6 @@
   font-size: 13px;
 }
 
-/* INPUTS */
 .project-form input[type="text"],
 .project-form textarea,
 .project-form input[type="date"] {
@@ -49,6 +68,24 @@
   border-radius: 5px;
   border: 1px solid #ccc;
   font-size: 10px;
+}
+
+.project-form .field-error {
+  grid-column: 2;
+  margin-top: -14px;
+  margin-bottom: -6px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #d93025;
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .project-form .field-error {
+    grid-column: 1;
+    margin-top: 6px;
+    margin-bottom: 0;
+  }
 }
 
 .create-project input::-webkit-input-placeholder,
@@ -61,7 +98,6 @@
   resize: none;
 }
 
-/* CHECKBOXES */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -130,10 +166,6 @@
   outline-offset: 3px;
 }
 
-/* ========================== */
-/* NEXT BUTTON */
-/* ========================== */
-
 .btn-next {
   grid-column: 2;
   justify-self: end;
@@ -152,11 +184,6 @@
 .btn-next:hover {
   background-color: #222;
 }
-
-
-/* ========================== */
-/* MOBILE */
-/* ========================== */
 
 @media (max-width: 900px) {
   .project-form {

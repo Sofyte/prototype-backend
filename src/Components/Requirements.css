@@ -15,6 +15,32 @@
   margin: 0;
 }
 
+.req-header h3 {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.req-header h4 {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+.req-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 30px 0 12px 0;
+  color: #005fa3;
+}
+
+.req-title {
+  text-align: center;
+  color: #222;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
 .req-subtitle {
   margin: 6px 0 0;
   color: #666;
@@ -65,6 +91,36 @@
 .req-edit-btn:hover {
   background-color: #666;
   color: white;
+}
+
+.req-action-group {
+  display: flex;
+  gap: 6px;
+}
+
+.req-decline-btn {
+  background-color: #d93025;
+  border: 1px solid #d93025;
+  color: #fff;
+}
+
+.req-decline-btn:hover {
+  background-color: #b32018;
+  border-color: #b32018;
+}
+
+.modal-card--small {
+  width: min(420px, 100%);
+}
+
+.modal-btn--danger {
+  background: #d93025;
+  border: 1px solid #d93025;
+  color: #fff;
+}
+
+.modal-btn--danger:hover {
+  background: #b32018;
 }
 
 .modal-overlay {
@@ -149,7 +205,7 @@
   width: 100%;
   margin-top: 6px;
 
-  border: 2px solid #d00;
+  border: 1px solid #ccc;
   border-radius: 10px;
   padding: 10px 12px;
 
@@ -216,6 +272,23 @@
   cursor: not-allowed;
 }
 
+.modal-field-error {
+  color: #d93025;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.modal-input-error {
+  border-color: #d93025 !important;
+}
+
+.modal-input-error:focus {
+  border-color: #d93025 !important;
+  box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.12) !important;
+}
+
 .pa-bulk-actions {
   display: flex;
   gap: 8px;
@@ -265,9 +338,6 @@
   cursor: not-allowed;
 }
 
-/* ================================
-   PA COLLAPSIBLE HEADER (same as Recommendations)
-================================ */
 .pa-collapse-header {
   margin-top: 18px;
   padding: 12px 14px;
@@ -310,25 +380,20 @@
   color: #003e72;
 }
 
-/* ================================
-   RESPONSIVE TABLE WRAPPER
-================================ */
 .req-table-wrap {
   width: 100%;
-  overflow-x: auto;              /* ✅ allows horizontal scroll instead of breaking layout */
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-radius: 10px;           /* keep rounded corners visible */
+  border-radius: 10px;
 }
 
-/* Ensure table can be wider than container when needed */
 .req-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;              /* ✅ prevents ugly column collapse; scroll appears on 1024 */
+  min-width: 980px;
   background: #fff;
 }
 
-/* Prevent long text from breaking layout */
 .req-table th,
 .req-table td {
   white-space: normal;
@@ -336,35 +401,29 @@
   overflow-wrap: anywhere;
 }
 
-/* Optional: keep small columns compact so Recommendation/Goal get space */
 .req-table th:nth-child(3),
-.req-table td:nth-child(3), /* WCAG */
+.req-table td:nth-child(3),
 .req-table th:nth-child(4),
-.req-table td:nth-child(4), /* Probability */
+.req-table td:nth-child(4),
 .req-table th:nth-child(5),
-.req-table td:nth-child(5), /* Status */
+.req-table td:nth-child(5),
 .req-table th:nth-child(6),
-.req-table td:nth-child(6)  /* Priority */ {
+.req-table td:nth-child(6) {
   white-space: nowrap;
 }
 
-/* Make "Updated" column not huge */
 .req-table th:nth-child(7),
 .req-table td:nth-child(7) {
   white-space: nowrap;
   width: 120px;
 }
 
-/* Action column fixed-ish */
 .req-table th:nth-child(8),
 .req-table td:nth-child(8) {
   white-space: nowrap;
   width: 90px;
 }
 
-/* ================================
-   1024px and below: slightly tighter padding/font
-================================ */
 @media (max-width: 1024px) {
   .req-table th,
   .req-table td {
@@ -373,13 +432,10 @@
   }
 
   .req-table {
-    min-width: 920px; /* a bit smaller but still scrollable */
+    min-width: 920px;
   }
 }
 
-/* ================================
-   768px and below: more compact
-================================ */
 @media (max-width: 768px) {
   .req-table th,
   .req-table td {
@@ -390,4 +446,23 @@
   .req-table {
     min-width: 860px;
   }
+}
+
+.req-export-actions {
+  margin-top: 40px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.req-export-btn {
+  padding: 10px 20px;
+  background: #111;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.req-export-btn:hover {
+  background: #333;
 }

@@ -77,3 +77,46 @@
   background: #0092E1;
   color: white;
 }
+
+.myp-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin: 0 auto 18px auto;
+  padding: 12px 14px;
+
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+
+  border: 1px solid;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+.myp-banner--success {
+  background: #ecfdf3;
+  border-color: #22c55e;
+  color: #166534;
+}
+
+.myp-banner--error {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #7f1d1d;
+}
+
+.myp-banner-x {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: inherit;
+}
+
+.myp-banner-x:hover {
+  background: rgba(0,0,0,0.06);
+}
