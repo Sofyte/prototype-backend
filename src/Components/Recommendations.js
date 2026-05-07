@@ -5,7 +5,7 @@ import "./Recommendations.css";
 function Recommendations() {
   const { projectId } = useParams();
 
-  const API_BASE = "http://localhost:5000";
+  const API_BASE = "https://prototype-backend-production-e92e.up.railway.app";
 
   const navigate = useNavigate();
 

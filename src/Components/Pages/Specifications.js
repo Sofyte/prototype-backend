@@ -21,7 +21,7 @@ function Specifications() {
   const [paErrors, setPaErrors] = useState({});
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/kr")
+    fetch("https://prototype-backend-production-e92e.up.railway.app/api/kr")
       .then((res) => res.json())
       .then((data) => {
         setKrList(data);
@@ -127,7 +127,7 @@ function Specifications() {
     if (!validateAll()) return;
 
     for (const pa of projectAspects) {
-      const paRes = await fetch("http://localhost:5000/api/pa/create", {
+      const paRes = await fetch("https://prototype-backend-production-e92e.up.railway.app/api/pa/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -149,7 +149,7 @@ function Specifications() {
         id_GKR: Number(id_GKR),
       }));
 
-      await fetch("http://localhost:5000/api/pa/kr/save", {
+      await fetch("https://prototype-backend-production-e92e.up.railway.app/api/pa/kr/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

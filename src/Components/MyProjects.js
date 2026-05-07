@@ -10,7 +10,7 @@ function MyProjects() {
   const location = useLocation();
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/myprojects")
+    fetch("https://prototype-backend-production-e92e.up.railway.app/api/myprojects")
       .then((res) => res.json())
       .then((data) => setProjects(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Klaida gaunant projektus:", err));

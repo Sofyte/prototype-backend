@@ -5,7 +5,7 @@ import "./ProjectCreate.css";
 function ProjectCreate() {
   const navigate = useNavigate();
 
-  const API_BASE = "http://localhost:5000";
+  const API_BASE = "https://prototype-backend-production-e92e.up.railway.app";
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const DRAFT_KEY = "reqfa_project_create_draft";

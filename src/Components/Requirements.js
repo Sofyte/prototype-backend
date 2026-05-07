@@ -40,8 +40,8 @@ function Requirements() {
     setLoading(true);
 
     Promise.all([
-      fetch(`http://localhost:5000/api/project/${projectId}`).then((r) => r.json()),
-      fetch(`http://localhost:5000/api/requirements/${projectId}`).then((r) => r.json()),
+      fetch(`https://prototype-backend-production-e92e.up.railway.app/api/project/${projectId}`).then((r) => r.json()),
+      fetch(`https://prototype-backend-production-e92e.up.railway.app/api/requirements/${projectId}`).then((r) => r.json()),
     ])
       .then(([project, requirements]) => {
         const lvl = project?.Atitikties_lygis
@@ -162,7 +162,7 @@ function Requirements() {
           };
 
           const res = await fetch(
-            "http://localhost:5000/api/pa-reikalavimas/update",
+            "https://prototype-backend-production-e92e.up.railway.app/api/pa-reikalavimas/update",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -233,7 +233,7 @@ function Requirements() {
     };
 
     try {
-      const res = await fetch("http://localhost:5000/api/pa-reikalavimas/update", {
+      const res = await fetch("https://prototype-backend-production-e92e.up.railway.app/api/pa-reikalavimas/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -317,7 +317,7 @@ function Requirements() {
     try {
       await Promise.all(
         toUpdate.map((r) =>
-          fetch("http://localhost:5000/api/pa-reikalavimas/update", {
+          fetch("https://prototype-backend-production-e92e.up.railway.app/api/pa-reikalavimas/update", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -373,7 +373,7 @@ function Requirements() {
     try {
       await Promise.all(
         toUpdate.map((r) =>
-          fetch("http://localhost:5000/api/pa-reikalavimas/update", {
+          fetch("https://prototype-backend-production-e92e.up.railway.app/api/pa-reikalavimas/update", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
