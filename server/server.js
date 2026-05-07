@@ -53,11 +53,11 @@ app.get("/api/health", (req, res) => {
    DB CONNECTION (from .env)
 ------------------------------ */
 const db = mysql.createConnection({
-  host: "127.0.0.1",
+  host: "mysql.railway.internal",
   port: 3306,
   user: "root",
-  password: "Sofija333",
-  database: "magistrinis",
+  password: "xvYGItzlvdvWcuZHMjdJrwiEXADUvhHf",
+  database: "railway",
   multipleStatements: true,
 });
 
