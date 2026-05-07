@@ -413,7 +413,7 @@ app.get("/api/requirements/:projectId", (req, res) => {
     INNER JOIN reikalavimas req
       ON req.id_Reikalavimas = par.fk_id_Reikalavimas
       AND req.fk_id_PA = par.fk_id_PA
-    LEFT JOIN pa ON pa.id_PA = req.fk_id_PA
+    LEFT JOIN PA pa ON pa.id_PA = req.fk_id_PA
     LEFT JOIN rekomendacija r ON r.id_Rekomendacija = req.fk_id_Rekomendacija
 
     WHERE req.fk_id_Projektas = ?
